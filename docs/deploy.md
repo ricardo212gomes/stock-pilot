@@ -4,6 +4,7 @@ StockPilot runs on [Vercel](https://vercel.com)'s Hobby plan (free for personal,
 
 ## The project
 
+- Production is at **https://stock-pilot-three-vert.vercel.app** (`stock-pilot.vercel.app` was taken).
 - Imported from the GitHub repository with the Next.js preset; the production branch is `main`.
 - Node 22, from `engines` in `package.json`, as the GitHub Actions jobs use.
 - Functions run in **Frankfurt (`fra1`)**, set in `vercel.json`, next to the Neon database (`eu-central-1`). Every page reads Postgres, and a US region would add a round trip to each query.
@@ -20,7 +21,7 @@ They live in two places, and a rotated key has to be changed in both where it's 
 | `TELEGRAM_BOT_TOKEN`, `TELEGRAM_BOT_USERNAME` | Yes | Yes | Yes |
 | `ALPACA_API_KEY`, `ALPACA_SECRET_KEY` | Yes | Yes | Yes |
 | `AUTH_SECRET`, `AUTH_GOOGLE_ID`, `AUTH_GOOGLE_SECRET` | Yes | Yes, the same values | No |
-| `AUTH_REDIRECT_PROXY_URL` | `https://<project>.vercel.app/api/auth` | The same | No |
+| `AUTH_REDIRECT_PROXY_URL` | `https://stock-pilot-three-vert.vercel.app/api/auth` | The same | No |
 | `APP_URL` | The production URL | No | The production URL |
 | `AGENTS_GOOGLE_API_KEY`, `AI_PORTFOLIO_TRADING_ENABLED` | No | No | Yes, only the jobs read them |
 
@@ -29,7 +30,7 @@ They live in two places, and a rotated key has to be changed in both where it's 
 
 ## Google sign-in
 
-The Google OAuth client lists `https://<project>.vercel.app/api/auth/callback/google` as an authorized redirect URI, beside `http://localhost:3000/...` (`docs/auth.md`). A custom domain needs its own.
+The Google OAuth client lists `https://stock-pilot-three-vert.vercel.app/api/auth/callback/google` as an authorized redirect URI, beside `http://localhost:3000/...` (`docs/auth.md`). A custom domain needs its own.
 
 **Previews sign in through production.** Each preview has its own URL, and Google doesn't accept wildcard redirect URIs. With `AUTH_REDIRECT_PROXY_URL` set to production's `/api/auth`, Auth.js sends a preview's sign-in through production's redirect URI and back. That only needs the same `AUTH_SECRET` on both. Only production's URI is registered with Google.
 
@@ -56,7 +57,7 @@ Previews get the same `AUTH_*` variables as production on purpose. Without them 
 The scheduled jobs (notifications, the AI portfolio, portfolio reviews, market valuation, the largest companies, pruning notifications) keep running in GitHub Actions, unchanged. They don't call the app, so the deployment doesn't affect them, except that `APP_URL` links Telegram messages to its pages:
 
 ```bash
-gh secret set APP_URL   # https://<project>.vercel.app
+gh secret set APP_URL   # https://stock-pilot-three-vert.vercel.app
 ```
 
 The weekly largest-companies snapshot commits to `main`, and each of those commits deploys production; that's harmless.
