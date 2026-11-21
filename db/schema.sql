@@ -182,7 +182,7 @@ create index if not exists portfolio_reviews_user_idx on portfolio_reviews (user
 create table if not exists saved_projections (
   id bigint generated always as identity primary key,
   user_id text not null,
-  tool text not null check (tool in ('intrinsic-value', 'jeremy-projection', 'plumas-projection')),
+  tool text not null check (tool in ('intrinsic-value', 'jeremy-projection', 'plumas-projection', 'parkev-dcf')),
   symbol text not null,
   name text not null,
   note text,
@@ -198,6 +198,11 @@ create table if not exists saved_projections (
 );
 
 create index if not exists saved_projections_user_idx on saved_projections (user_id, symbol, tool, updated_at desc);
+
+-- Each new valuation tool widens the check above on a database made before it (Parkev DCF was added after the table).
+alter table saved_projections drop constraint if exists saved_projections_tool_check;
+alter table saved_projections add constraint saved_projections_tool_check
+  check (tool in ('intrinsic-value', 'jeremy-projection', 'plumas-projection', 'parkev-dcf'));
 
 -- The notifications bell (see docs/notifications.md): every message StockPilot sends is kept here, read in the app,
 -- and also sent to Telegram when the user has it linked and on. Rows older than 90 days are removed daily

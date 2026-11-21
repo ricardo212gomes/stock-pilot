@@ -9419,6 +9419,99 @@ a.earnings-round:focus-visible {
 .dcf-bridge-total dt,
 .dcf-bridge-total dd { color: var(--card-foreground); font-weight: 700; }
 
+/* Parkev DCF: his free cash flow sheet, then the inputs beside the value bridge and the beta scenarios. */
+.parkev-sheet .sheet-input.parkev-amount { width: 104px; }
+
+/* A grown year shows its figure plainly; a typed one is bold with a stronger border, as an input that was set. */
+.parkev-sheet .parkev-typed { border-color: var(--foreground); }
+.parkev-sheet .parkev-typed input { font-weight: 700; }
+.parkev-sheet .sheet-input input::placeholder { color: var(--muted-foreground); }
+.parkev-sheet .parkev-implied { font-style: italic; }
+.parkev-sheet td.parkev-muted { color: var(--muted-foreground); }
+
+.parkev-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 0 16px;
+  align-items: start;
+}
+
+.parkev-inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.parkev-field {
+  display: grid;
+  gap: 4px;
+}
+
+.parkev-field > label {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 20px;
+}
+
+.parkev-field .assumption-input-wrap { margin-top: 0; }
+
+.parkev-select {
+  min-width: 0;
+  height: 36px;
+  padding: 6px 6px 6px 10px;
+  border: 1px solid var(--input);
+  border-radius: var(--radius);
+  background: var(--input-background);
+  color: var(--foreground);
+  font: inherit;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.parkev-select:focus {
+  outline: 2px solid var(--ring);
+  outline-offset: 1px;
+}
+
+.parkev-computed {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.parkev-computed span { color: var(--muted-foreground); }
+
+.parkev-computed-strong {
+  padding-top: 6px;
+  border-top: 1px solid var(--border-strong);
+  font-size: 15px;
+}
+
+.parkev-computed-strong span { color: var(--card-foreground); font-weight: 600; }
+
+.parkev-bridge {
+  max-width: none;
+  margin: 12px 0 8px;
+}
+
+/* Four scenarios fit their column, so the statement tables' 960px minimum doesn't apply. */
+.parkev-beta-table { min-width: 0; }
+
+.parkev-beta-table th,
+.parkev-beta-table td { padding-right: 8px; padding-left: 8px; white-space: nowrap; }
+
+.parkev-beta-table th:first-child { text-align: left; }
+
+.parkev-beta-table .parkev-beta-current th,
+.parkev-beta-table .parkev-beta-current td { font-weight: 700; }
+
+@media (max-width: 1100px) {
+  .parkev-layout { grid-template-columns: minmax(0, 1fr); }
+}
+
 .dcf-panel-heading {
   display: flex;
   flex-wrap: wrap;

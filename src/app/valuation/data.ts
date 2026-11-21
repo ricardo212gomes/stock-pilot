@@ -9,6 +9,7 @@ import {
 import { getStatementTable, type StatementTable } from "@/lib/financial-statements";
 import { getAnalystEstimates, getHeaderQuote, getOutstandingShares } from "@/lib/stock-overview";
 import { buildJeremyDefaults, type JeremyDefaults } from "@/lib/jeremy-projection";
+import { buildParkevDefaults, type ParkevDefaults } from "@/lib/parkev-dcf";
 import { buildProjectionDefaults, type ProjectionDefaults } from "@/lib/plumas-projection";
 import { recommendProjection, type ProjectionFit } from "@/lib/projection-fit";
 import { classifyStock, type Classification, type ClassifierYear } from "@/lib/valuation/classify";
@@ -131,6 +132,49 @@ export async function loadPriceProjectionData(symbol: string): Promise<PriceProj
         buybackYield: buybacks.length ? buybacks.reduce((sum, value) => sum + value, 0) / buybacks.length : null,
         dividendYield: years[0]?.dividendYield ?? null,
       }),
+    },
+  };
+}
+
+export type ParkevData = {
+  defaults: ParkevDefaults;
+  // The market figures beside the valuation on his sheets.
+  market: { changePercent: number | null; yearHigh: number | null; yearLow: number | null };
+  source: "fmp" | "sec";
+};
+
+export type ParkevDataResult =
+  | { ok: true; data: ParkevData }
+  | { ok: false; reason: FmpFailureReason };
+
+function finiteOrNull(value: unknown): number | null {
+  return typeof value === "number" && Number.isFinite(value) ? value : null;
+}
+
+// Parkev DCF's starting values, from the same cached requests as Intrinsic Value (whose growth rate it starts from)
+// and the header's quote.
+export async function loadParkevData(symbol: string): Promise<ParkevDataResult> {
+  const [loaded, quote] = await Promise.all([loadProjectionData(symbol), getHeaderQuote(symbol)]);
+  if (!loaded.ok) return loaded;
+  const { fundamentals, profile, riskFreeRate, defaults } = loaded.data;
+  const parkev = buildParkevDefaults({
+    financials: fundamentals.annualFinancials,
+    profile,
+    riskFreeRate,
+    quote: quote.ok ? { price: quote.data.price, marketCap: quote.data.marketCap } : null,
+    growth: { rate: defaults.assumptions.growthRate ?? 0.05, note: defaults.notes.growthRate },
+  });
+  if (!parkev) return { ok: false, reason: "no-data" };
+  return {
+    ok: true,
+    data: {
+      defaults: parkev,
+      market: {
+        changePercent: quote.ok ? quote.data.changePercent : null,
+        yearHigh: quote.ok ? finiteOrNull(quote.data.raw.yearHigh) : null,
+        yearLow: quote.ok ? finiteOrNull(quote.data.raw.yearLow) : null,
+      },
+      source: fundamentals.source,
     },
   };
 }

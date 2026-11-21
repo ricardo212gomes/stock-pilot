@@ -1,15 +1,16 @@
 # Valuation tools
 
-A company's **Valuation** tab, the last of its tabs, holds three separate calculators as sub-tabs:
+A company's **Valuation** tab, the last of its tabs, holds four separate calculators as sub-tabs:
 
 | Tool | Route |
 | --- | --- |
 | Intrinsic Value | `/valuation/intrinsic-value?symbol=AAPL` |
 | Jeremy's Projection | `/valuation/jeremy-projection?symbol=AAPL` |
 | Plumas Projection | `/valuation/plumas-projection?symbol=AAPL` |
+| Parkev DCF | `/valuation/parkev-dcf?symbol=AAPL` |
 | Saved projections (every company and tool) | `/valuation/saved` |
 
-Each page has the company header and tabs with Valuation open, then the tools as sub-tabs for the same ticker (`ValuationHeader`); the Valuation tab opens Intrinsic Value. The sidebar has no valuation section: Stocks stays highlighted on these pages, and the top bar's search keeps you on the same tool for the new ticker. Without a ticker, each page shows a short start screen. They share `src/app/valuation/data.ts`, `actions.ts`, `calculator-input.tsx` and `valuation-parts.tsx` (the header with the sub-tabs, start screen and load error); `tools.ts` lists the tools for the sub-tabs. Signed-in users can **save** a projection from any of the three tools under a name and open it again later, on any device (see [Saved projections](#saved-projections)). The old `/projections` page redirects to these (`?view=3y` to Jeremy's Projection and `?view=dcf` to the Detailed DCF), as do the old `/valuation/three-year-projection` (to Jeremy's Projection, whose template it followed), `/valuation/financial-projections` (to the Plumas Projection) and `/valuation/dcf-calculator` (to the Detailed DCF on Intrinsic Value, `?model=dcf#detailed-dcf`, which opens it).
+Each page has the company header and tabs with Valuation open, then the tools as sub-tabs for the same ticker (`ValuationHeader`); the Valuation tab opens Intrinsic Value. The sidebar has no valuation section: Stocks stays highlighted on these pages, and the top bar's search keeps you on the same tool for the new ticker. Without a ticker, each page shows a short start screen. They share `src/app/valuation/data.ts`, `actions.ts`, `calculator-input.tsx` and `valuation-parts.tsx` (the header with the sub-tabs, start screen and load error); `tools.ts` lists the tools for the sub-tabs. Signed-in users can **save** a projection from any of the four tools under a name and open it again later, on any device (see [Saved projections](#saved-projections)). The old `/projections` page redirects to these (`?view=3y` to Jeremy's Projection and `?view=dcf` to the Detailed DCF), as do the old `/valuation/three-year-projection` (to Jeremy's Projection, whose template it followed), `/valuation/financial-projections` (to the Plumas Projection) and `/valuation/dcf-calculator` (to the Detailed DCF on Intrinsic Value, `?model=dcf#detailed-dcf`, which opens it).
 
 ## Intrinsic Value
 
@@ -295,21 +296,59 @@ The "Where the starting values come from" list under the table gives each one fo
 
 Files: `src/lib/plumas-projection.ts` (math, history and defaults, also used by Jeremy's Projection), `src/lib/plumas-projection-autofill.ts` (prompt and parsing), `src/app/valuation/plumas-projection.tsx` (the page's state), `src/app/valuation/plumas-projection-parts.tsx` (table, cards, chart and comparison), `src/app/valuation/projection-cells.tsx` (cell formats and inputs shared with Jeremy's Projection) and `src/app/valuation/saved-projection.ts` (browser storage).
 
+## Parkev DCF
+
+`/valuation/parkev-dcf?symbol=AAPL` follows the discounted cash flow sheet Parkev Tatevosian uses in his videos. From the same inputs it gives the same figures as his sheets, to the dollar: `src/lib/parkev-dcf.test.ts` reproduces his Netflix sheet at two prices, his Nvidia sheet and his sheet with the beta scenarios (present values, value of operations, value of equity, shares, value per share and upside), and the value of equity and value per share on his CoreWeave sheet.
+
+The page opens with a market bar: the current price and the market cap (both editable for the visit), the share count they give, today's change and the 52-week range, with **Reset** and **Save**. Below it come the intrinsic value per share against the price, and the **free cash flow table**: the last reported fiscal year, then ten forecast years, with each year's growth, the years it's discounted by and its present value. The table is in billions (millions when the market cap is under $10B and the cash flow under $1B), as on his sheets. Then come **Your inputs** (growth, discount rate, balance sheet and discounting) beside the **value bridge** (from the present values to the value per share) and the **scenario analysis**: the value per share with beta 25% and 50% higher and 25% lower, as on his sheet. **How it works** closes the page.
+
+| Step | Formula |
+| --- | --- |
+| Free cash flow | Each forecast year is the year before × (1 + growth): the short-term rate for years 1–5, the transition rate for 6–10. A typed year replaces its growth, and the years after grow from it |
+| CAPM | risk-free rate + beta × market risk premium |
+| WACC | equity weight × CAPM + debt weight × cost of debt, with equity weight = 1 − debt weight and no tax shield, as on his sheets |
+| Present value | each counted year's free cash flow ÷ (1 + WACC)^years |
+| Terminal value | year 10's free cash flow × (1 + long-term growth) ÷ (WACC − long-term growth), ÷ (1 + WACC)^years until the terminal value |
+| Value of operations | the present values + the terminal value's |
+| Value of equity | value of operations + non-operating assets − debt |
+| Shares | market cap ÷ price, as on his sheets |
+| Intrinsic value per share | value of equity ÷ shares; the upside is value ÷ price − 1 |
+
+**Timing.** His sheets don't all discount the same way, so three inputs under **Discounting** set it: the first counted year, the years until its cash flow (each later year is one more), and the years until the terminal value. The defaults follow his Netflix sheet: the second forecast year (the one after the year in progress) at 1 year, and the terminal value at 8.5 years. The year in progress only grows the years after it. His Nvidia sheet counts from the third forecast year at 1.5 years with the terminal value at 7.5, and his sheet with the beta scenarios has the terminal value at 8.25. **Use his usual timing** brings the defaults back. A WACC at or below the long-term growth has no terminal value, and the page says so.
+
+| Input | Default |
+| --- | --- |
+| Last reported free cash flow | Operating cash flow less capital spending, from the last annual report; typed over in the table's first box |
+| Forecast years | All grown; type analysts' estimates over them, as he does |
+| Short-term growth | The Intrinsic Value tool's growth rate: analysts' consensus revenue and EPS growth where FMP has it, else history, capped |
+| Transition growth | Half the short-term rate, as on his Netflix sheet |
+| Long-term growth | 3%, the cautious end of the 3% to 5% his sheets use |
+| Beta | FMP's beta, to two decimals; 1 without one |
+| Risk-free rate | The 10-year Treasury yield; 4.25% without it |
+| Market risk premium, cost of debt, debt weight | 6%, 5.75% and 25%, as on his sheets |
+| Non-operating assets | Cash and short-term investments at the end of the last fiscal year |
+| Debt | Total debt at the end of the last fiscal year |
+| Price and market cap | Today's quote; without a market cap, the last report's diluted shares × the price |
+
+Edits are saved in the browser per company and fiscal year (`localStorage`, key `stockpilot-parkev:SYMBOL:YEAR`): every rate, the typed years, the discounting, and a typed reported cash flow, cash or debt. A typed price or market cap lasts for the visit. **Save** keeps everything, a typed price or market cap included, in your account (see [Saved projections](#saved-projections)). There's no AI autofill, as on his sheet.
+
+Files: `src/lib/parkev-dcf.ts` (math and defaults), `src/app/valuation/parkev-dcf.tsx` (the page's state and layout), `src/app/valuation/parkev-dcf-parts.tsx` (the free cash flow table and the beta scenarios), and `loadParkevData` in `src/app/valuation/data.ts` (the same cached requests as Intrinsic Value, whose growth rate it starts from, plus the header's quote).
+
 ## Saved projections
 
-Each tool has a **Save** button (next to **Reset**: in the starting-point bar on the two projections, at the top of the assumptions on Intrinsic Value). It needs Google sign-in and the database: signed out, the button reads **Sign in to save** and goes to Google and back; without sign-in keys or `DATABASE_URL` it's hidden.
+Each tool has a **Save** button (next to **Reset**: in the starting-point bar on the two projections and the market bar on Parkev DCF, at the top of the assumptions on Intrinsic Value). It needs Google sign-in and the database: signed out, the button reads **Sign in to save** and goes to Google and back; without sign-in keys or `DATABASE_URL` it's hidden.
 
 - **Save** opens a dialog with a name (by default `NVDA · Plumas · 14 Nov 2026`) and an optional note, and Cancel and Save at the bottom right. A new save opens straight away at `?saved=ID`.
-- **Saved** above each tool, folded until opened, lists that company's saves in that tool: the name and note, the fiscal year it starts from, when it was saved, the **value then**, the price at save, the **price now** and the **gap** (value then ÷ price now − 1). The value then is Intrinsic Value's blended value, or the base scenario's mid price target for the last projected year (with the other scenarios' under it).
+- **Saved** above each tool, folded until opened, lists that company's saves in that tool: the name and note, the fiscal year it starts from, when it was saved, the **value then**, the price at save, the **price now** and the **gap** (value then ÷ price now − 1). The value then is Intrinsic Value's blended value, Parkev DCF's value per share, or the base scenario's mid price target for the last projected year (with the other scenarios' under it).
 - **Opening** a save (`/valuation/<tool>?symbol=NVDA&saved=ID`) restores every input and choice and shows a banner with the way back to the draft. Edits stay on the page and leave the browser draft alone. **Save…** then offers **Update** (the same save, with today's price and values) or **Save as a copy** under a new name.
 - **Rename** and **Delete** sit on each row; delete asks once more in the row. Deleting the open save goes back to the draft.
 - **All saved projections** (`/valuation/saved`, in the sidebar) lists every company and tool, sorted newest or oldest first, or by the largest or smallest gap. Today's prices are one cached quote per company.
-- A save keeps **its own fiscal year**: the Plumas Projection keeps the base year's figures, Jeremy's the starting year with its revenue, net income and shares, and Intrinsic Value every starting value. After a new annual report it still opens as saved, with a note that a newer report exists; the history columns and analysts' estimates show only the years that still line up. Today's price stays live unless one was typed over the quote.
+- A save keeps **its own fiscal year**: the Plumas Projection keeps the base year's figures, Jeremy's the starting year with its revenue, net income and shares, Parkev DCF the last reported year with its free cash flow, cash and debt, and Intrinsic Value every starting value. After a new annual report it still opens as saved, with a note that a newer report exists; the history columns and analysts' estimates show only the years that still line up. Today's price stays live unless one was typed over the quote.
 - The browser draft (`localStorage`, above) is unchanged: it's the unsaved work in progress.
 
 ### Storage and versions
 
-`saved_projections` in `db/schema.sql` (run `npm run db:setup`): `id`, `user_id` (the Google account id from the session, never from the browser), `tool`, `symbol`, `name`, `note`, `inputs` (jsonb), `schema_version`, `base_year`, `price_at_save`, `value_at_save` (jsonb: `[{ id, label, value }]`, the blended value and each recommended model's, or each scenario's), `currency`, `created_at` and `updated_at`. A user keeps up to 300 saves; names are up to 80 characters and notes up to 1,000.
+`saved_projections` in `db/schema.sql` (run `npm run db:setup`): `id`, `user_id` (the Google account id from the session, never from the browser), `tool`, `symbol`, `name`, `note`, `inputs` (jsonb), `schema_version`, `base_year`, `price_at_save`, `value_at_save` (jsonb: `[{ id, label, value }]`, the blended value and each recommended model's, or each scenario's), `currency`, `created_at` and `updated_at`. A user keeps up to 300 saves; names are up to 80 characters and notes up to 1,000. `tool` is checked against the four tools; adding a tool widens that check in `db/schema.sql` (drop and add `saved_projections_tool_check`), so run `npm run db:setup` again before saving from a new tool.
 
 What `inputs` holds for each tool, at version 1:
 
@@ -318,7 +357,8 @@ What `inputs` holds for each tool, at version 1:
 | Intrinsic Value | `assumptions` (every assumption; `currentPrice` only when typed over, else null for today's), `sources`, `dcfOptions` (year 1 cash flow and terminal method), `fcfBasis`, `aiNotes`, `aiSummary` |
 | Jeremy's Projection | `cases` (bull, base, bear: each input for each year), `start` (`year`, `revenue`, `netIncome`, `shares`), `entryPrice` |
 | Plumas Projection | `scenarios` (all five), `ai`, `view` (`mode` Simple/Advanced, `count` 3/5), `base` (the base fiscal year and its figures), `start` (`price`, `shares`, each null unless typed over) |
+| Parkev DCF | `assumptions` (the three growth rates, beta, risk-free rate, market risk premium, cost of debt, debt weight), `estimates` (ten forecast years, each a typed free cash flow or null), `timing` (`firstCounted`, `firstYears`, `terminalYears`), `base` (`year`, `fcf`, `nonOperatingAssets`, `debt`), `market` (`marketCap`, `price`, each null unless typed over) |
 
-When a tool's inputs change shape, raise its number in `SCHEMA_VERSIONS` and add a step in `MIGRATIONS` (`src/lib/saved-projection-inputs.ts`) that turns the old version into the new one and names anything it drops. Opening a save runs every step from its version up (`migrateInputs`); a save from a newer version, or one with no step, shows a notice instead. Then each tool's reader (`restoreIntrinsicValue`, `restoreJeremy`, `restorePlumas`) keeps what it knows: an input that no longer exists is left out, and one that can't be read goes back to the starting value; both are named in the banner. The Detailed DCF's inputs after #2 (the year 1 forecast and the terminal method, in `dcfOptions`) are version 1, the first saved shape.
+When a tool's inputs change shape, raise its number in `SCHEMA_VERSIONS` and add a step in `MIGRATIONS` (`src/lib/saved-projection-inputs.ts`) that turns the old version into the new one and names anything it drops. Opening a save runs every step from its version up (`migrateInputs`); a save from a newer version, or one with no step, shows a notice instead. Then each tool's reader (`restoreIntrinsicValue`, `restoreJeremy`, `restorePlumas`, `restoreParkev`) keeps what it knows: an input that no longer exists is left out, and one that can't be read goes back to the starting value; both are named in the banner. The Detailed DCF's inputs after #2 (the year 1 forecast and the terminal method, in `dcfOptions`) are version 1, the first saved shape.
 
 Files: `src/lib/saved-projections.ts` (database), `src/lib/saved-projection-inputs.ts` (inputs, versions, migrations, value and gap), `src/lib/saved-projection-limits.ts`, `src/app/valuation/saved-actions.ts` (save, rename and delete server actions), `saved-data.ts` (what a tool page loads), `save-projection.tsx` (the button and dialog), `saved-section.tsx`, `saved-table.tsx` and `saved-row-actions.tsx` (the lists), `saved-banner.tsx`, and `src/app/valuation/saved/page.tsx`.

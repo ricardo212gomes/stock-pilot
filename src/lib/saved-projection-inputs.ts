@@ -13,8 +13,9 @@ import {
   type ScenarioInputs,
 } from "./plumas-projection";
 import { CASES, CASE_FIELDS, JEREMY_YEARS, type CaseId, type CaseInputs } from "./jeremy-projection";
+import { ASSUMPTION_KEYS as PARKEV_ASSUMPTION_KEYS, PARKEV_YEARS, type ParkevAssumptions, type ParkevTiming } from "./parkev-dcf";
 
-export const SAVED_TOOLS = ["intrinsic-value", "jeremy-projection", "plumas-projection"] as const;
+export const SAVED_TOOLS = ["intrinsic-value", "jeremy-projection", "plumas-projection", "parkev-dcf"] as const;
 export type SavedTool = (typeof SAVED_TOOLS)[number];
 
 export function isSavedTool(value: unknown): value is SavedTool {
@@ -26,6 +27,7 @@ export const TOOL_SHORT_NAME: Record<SavedTool, string> = {
   "intrinsic-value": "Intrinsic Value",
   "jeremy-projection": "Jeremy",
   "plumas-projection": "Plumas",
+  "parkev-dcf": "Parkev",
 };
 
 export function defaultSaveName(symbol: string, tool: SavedTool, date = new Date()): string {
@@ -91,10 +93,22 @@ export type PlumasInputs = {
   start: { price: number | null; shares: number | null };
 };
 
+export type ParkevInputs = {
+  assumptions: ParkevAssumptions;
+  // One per forecast year: the free cash flow typed over its growth, or null.
+  estimates: (number | null)[];
+  timing: ParkevTiming;
+  // The last reported fiscal year it starts from, with its free cash flow and balance sheet.
+  base: { year: number; fcf: number | null; nonOperatingAssets: number; debt: number };
+  // Null means today's.
+  market: { marketCap: number | null; price: number | null };
+};
+
 export type ToolInputs = {
   "intrinsic-value": IntrinsicValueInputs;
   "jeremy-projection": JeremyInputs;
   "plumas-projection": PlumasInputs;
+  "parkev-dcf": ParkevInputs;
 };
 
 // ---- Versions and migrations --------------------------------------------------------------------------------------
@@ -104,6 +118,7 @@ export const SCHEMA_VERSIONS: Record<SavedTool, number> = {
   "intrinsic-value": 1,
   "jeremy-projection": 1,
   "plumas-projection": 1,
+  "parkev-dcf": 1,
 };
 
 type Raw = Record<string, unknown>;
@@ -115,6 +130,7 @@ export const MIGRATIONS: Record<SavedTool, Record<number, MigrationStep>> = {
   "intrinsic-value": {},
   "jeremy-projection": {},
   "plumas-projection": {},
+  "parkev-dcf": {},
 };
 
 export type Migrated = { ok: true; inputs: Raw; dropped: string[] } | { ok: false; reason: string };
@@ -309,6 +325,68 @@ export function restorePlumas(
       view: { mode, count },
       base: restoredBase,
       start: { price: isNumber(start.price) ? start.price : null, shares: isNumber(start.shares) ? start.shares : null },
+    },
+    dropped,
+  };
+}
+
+const PARKEV_ASSUMPTION_LABEL: Record<keyof ParkevAssumptions, string> = {
+  shortTermGrowth: "short-term growth",
+  transitionGrowth: "transition growth",
+  longTermGrowth: "long-term growth",
+  beta: "beta",
+  riskFreeRate: "risk-free rate",
+  marketRiskPremium: "market risk premium",
+  costOfDebt: "cost of debt",
+  debtWeight: "debt weight",
+};
+
+export function restoreParkev(
+  raw: Raw,
+  fallback: Pick<ParkevInputs, "assumptions" | "estimates" | "timing" | "base">,
+): Restored<ParkevInputs> {
+  const dropped: string[] = [];
+  unknownKeys(raw, ["assumptions", "estimates", "timing", "base", "market"], "", dropped);
+
+  const savedAssumptions = isRecord(raw.assumptions) ? raw.assumptions : {};
+  unknownKeys(savedAssumptions, PARKEV_ASSUMPTION_KEYS, "", dropped);
+  const assumptions = Object.fromEntries(PARKEV_ASSUMPTION_KEYS.map((key) => {
+    if (isNumber(savedAssumptions[key])) return [key, savedAssumptions[key]];
+    dropped.push(PARKEV_ASSUMPTION_LABEL[key]);
+    return [key, fallback.assumptions[key]];
+  })) as ParkevAssumptions;
+
+  let estimates = fallback.estimates;
+  if (Array.isArray(raw.estimates) && raw.estimates.length === PARKEV_YEARS && raw.estimates.every(numberOrNull)) {
+    estimates = raw.estimates as (number | null)[];
+  } else {
+    dropped.push("free cash flow estimates");
+  }
+
+  const timing = isRecord(raw.timing) ? raw.timing : null;
+  let restoredTiming = fallback.timing;
+  if (timing && Number.isInteger(timing.firstCounted) && isNumber(timing.firstYears) && isNumber(timing.terminalYears)) {
+    restoredTiming = { firstCounted: timing.firstCounted as number, firstYears: timing.firstYears, terminalYears: timing.terminalYears };
+  } else {
+    dropped.push("discounting");
+  }
+
+  const base = isRecord(raw.base) ? raw.base : null;
+  let restoredBase = fallback.base;
+  if (base && Number.isInteger(base.year) && numberOrNull(base.fcf) && isNumber(base.nonOperatingAssets) && isNumber(base.debt)) {
+    restoredBase = { year: base.year as number, fcf: base.fcf, nonOperatingAssets: base.nonOperatingAssets, debt: base.debt };
+  } else {
+    dropped.push("starting year");
+  }
+
+  const market = isRecord(raw.market) ? raw.market : {};
+  return {
+    inputs: {
+      assumptions,
+      estimates,
+      timing: restoredTiming,
+      base: restoredBase,
+      market: { marketCap: isNumber(market.marketCap) ? market.marketCap : null, price: isNumber(market.price) ? market.price : null },
     },
     dropped,
   };
