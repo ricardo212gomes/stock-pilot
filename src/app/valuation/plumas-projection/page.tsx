@@ -6,6 +6,9 @@ import { SavedSection } from "../saved-section";
 import { PlumasProjection } from "../plumas-projection";
 import { LoadError, ProjectionFitCard, SecSourceNote, ToolStart, ValuationHeader, readSymbol, type ValuationSearchParams } from "../valuation-parts";
 
+// This page's server actions wait for Gemini; on Vercel they get the Hobby plan's 300 seconds.
+export const maxDuration = 300;
+
 export const generateMetadata = companyMetadata("Plumas Projection", "Project a stock's revenue, margins, EPS, price and yearly return five years out, from the last report, in bear, base and bull scenarios.");
 
 export default async function PlumasProjectionPage({ searchParams }: { searchParams: ValuationSearchParams }) {

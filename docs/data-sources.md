@@ -2,6 +2,8 @@
 
 StockPilot runs on free plans, and each provider's free plan is tight in a different way: FMP allows 250 requests a day and only a sample of large companies, Finnhub 60 a minute but no analyst targets or estimates, Tiingo 50 an hour but only prices, Alpha Vantage 25 a day. So each kind of data comes from the source that gives it for free, everything is cached for as long as it stays true, identical requests are shared between pages, and a fallback stands in when a source can't answer. This page is the map; each feature's own doc has the details.
 
+The keys live in two places, Vercel for the app and GitHub Actions secrets for the scheduled jobs; [`docs/deploy.md`](./deploy.md#environment-variables) lists which goes where.
+
 ## The providers
 
 | Provider | Free plan | Key | Use it for | Not for |

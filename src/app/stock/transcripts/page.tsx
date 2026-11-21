@@ -22,6 +22,9 @@ import {
   type TranscriptSegment,
 } from "@/lib/transcripts";
 
+// This page's server actions wait for Gemini; on Vercel they get the Hobby plan's 300 seconds.
+export const maxDuration = 300;
+
 export const generateMetadata = companyMetadata("Transcripts", "Read a company's earnings calls, speaker by speaker, with an AI summary.");
 
 type TranscriptsPageProps = {

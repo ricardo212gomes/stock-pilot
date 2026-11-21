@@ -193,7 +193,7 @@ describe("previewStatementAction", () => {
     session.userId = "user-1";
     await expect(previewStatementAction(new FormData())).resolves.toEqual({ ok: false, error: "Choose your Trading 212 or Trade Republic statement, a PDF." });
     await expect(previewStatementAction(upload("PK\u0003\u0004 a zip"))).resolves.toMatchObject({ ok: false, error: expect.stringMatching(/isn't a PDF/) });
-    await expect(previewStatementAction(upload(new Uint8Array(10 * 1024 * 1024)))).resolves.toMatchObject({ ok: false, error: expect.stringMatching(/over 9.5 MB/) });
+    await expect(previewStatementAction(upload(new Uint8Array(4 * 1024 * 1024 + 1)))).resolves.toMatchObject({ ok: false, error: expect.stringMatching(/over 4 MB/) });
     readPdfItems.mockRejectedValueOnce(new Error("Invalid PDF structure."));
     await expect(previewStatementAction(upload("%PDF-1.7 broken"))).resolves.toEqual({ ok: false, error: "The PDF couldn't be read." });
     readPdfItems.mockResolvedValueOnce(pageOf([["Monthly statement"], ["2026-03-02", "Card payment", "-€12.00"]]));
