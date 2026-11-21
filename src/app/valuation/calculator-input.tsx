@@ -2,8 +2,9 @@
 
 import { useState } from "react";
 
-// Units for calculator inputs: amounts in millions, percentages as whole numbers.
-export type Unit = "currency" | "millions" | "shares" | "percent" | "multiple" | "years";
+// Units for calculator inputs: amounts in millions, percentages as whole numbers. "years" are whole; "period" is
+// years with decimals (1.5), and "number" has no unit (a beta).
+export type Unit = "currency" | "millions" | "shares" | "percent" | "multiple" | "years" | "period" | "number";
 
 export function toText(value: number | null, unit: Unit): string {
   if (value === null) return "";
@@ -32,9 +33,10 @@ export function NumberInput({
   currency: string;
   onChange: (value: number | null) => void;
 }) {
-  // Remounted (via key) when values change from outside, so the typed draft can stay local.
-  const [draft, setDraft] = useState(() => toText(value, unit));
-  const suffix = { currency, millions: `M ${currency}`, shares: "M", percent: "%", multiple: "×", years: "yrs" }[unit];
+  // While the box is focused it shows what was typed, so "8." or "-" can be on the way to a number; otherwise it
+  // shows the value it was given, which may have come from a draft saved in the browser after the first render.
+  const [draft, setDraft] = useState<string | null>(null);
+  const suffix = { currency, millions: `M ${currency}`, shares: "M", percent: "%", multiple: "×", years: "yrs", period: "yrs", number: "" }[unit];
   return (
     <div className="assumption-input-wrap">
       <input
@@ -42,13 +44,15 @@ export function NumberInput({
         type="text"
         inputMode="decimal"
         aria-label={label}
-        value={draft}
+        value={draft ?? toText(value, unit)}
+        onFocus={() => setDraft(toText(value, unit))}
         onChange={(event) => {
           setDraft(event.target.value);
           onChange(fromText(event.target.value, unit));
         }}
+        onBlur={() => setDraft(null)}
       />
-      <span className="assumption-suffix" aria-hidden="true">{suffix}</span>
+      {suffix && <span className="assumption-suffix" aria-hidden="true">{suffix}</span>}
     </div>
   );
 }

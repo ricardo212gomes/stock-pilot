@@ -8,6 +8,7 @@ import {
   type ScenarioInputs,
 } from "@/lib/plumas-projection";
 import { CASES, CASE_FIELDS, JEREMY_YEARS, type CaseId, type CaseInputs } from "@/lib/jeremy-projection";
+import { ASSUMPTION_KEYS, PARKEV_YEARS, type ParkevAssumptions, type ParkevTiming } from "@/lib/parkev-dcf";
 
 // Each company's projections are saved in the browser, so edits survive a reload. Where storage is
 // unavailable (some private windows) they're kept in memory for the visit instead.
@@ -24,6 +25,10 @@ export function projectionKey(symbol: string, baseYear: number): string {
 
 export function jeremyKey(symbol: string, startYear: number): string {
   return `stockpilot-jeremy:${symbol}:${startYear}`;
+}
+
+export function parkevKey(symbol: string, baseYear: number): string {
+  return `stockpilot-parkev:${symbol}:${baseYear}`;
 }
 
 export function subscribeSaved(onChange: () => void) {
@@ -122,6 +127,36 @@ export function parseSavedJeremy(text: string | null): SavedJeremy | null {
     }
     const figure = (value: unknown) => (typeof value === "number" && Number.isFinite(value) ? value : null);
     return { cases, start: { revenue: figure(payload.start?.revenue), netIncome: figure(payload.start?.netIncome), shares: figure(payload.start?.shares) } };
+  } catch {
+    return null;
+  }
+}
+
+export type SavedParkev = {
+  assumptions: ParkevAssumptions;
+  // One per forecast year: the free cash flow typed over its growth, or null.
+  estimates: (number | null)[];
+  timing: ParkevTiming;
+  // Starting figures typed over the defaults; null keeps the default.
+  start: { fcf: number | null; nonOperatingAssets: number | null; debt: number | null };
+};
+
+export function parseSavedParkev(text: string | null): SavedParkev | null {
+  if (!text) return null;
+  try {
+    const payload = JSON.parse(text) as { assumptions?: Record<string, unknown>; estimates?: unknown; timing?: Record<string, unknown>; start?: Record<string, unknown> };
+    const figure = (value: unknown) => (typeof value === "number" && Number.isFinite(value) ? value : null);
+    if (!ASSUMPTION_KEYS.every((key) => figure(payload.assumptions?.[key]) !== null)) return null;
+    const estimates = payload.estimates;
+    if (!Array.isArray(estimates) || estimates.length !== PARKEV_YEARS || !estimates.every((value) => value === null || figure(value) !== null)) return null;
+    const timing = payload.timing;
+    if (!timing || !Number.isInteger(timing.firstCounted) || figure(timing.firstYears) === null || figure(timing.terminalYears) === null) return null;
+    return {
+      assumptions: Object.fromEntries(ASSUMPTION_KEYS.map((key) => [key, payload.assumptions![key]])) as ParkevAssumptions,
+      estimates: estimates as (number | null)[],
+      timing: { firstCounted: timing.firstCounted as number, firstYears: timing.firstYears as number, terminalYears: timing.terminalYears as number },
+      start: { fcf: figure(payload.start?.fcf), nonOperatingAssets: figure(payload.start?.nonOperatingAssets), debt: figure(payload.start?.debt) },
+    };
   } catch {
     return null;
   }
