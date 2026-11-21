@@ -13,6 +13,9 @@ import { PortfolioDashboard } from "./dashboard";
 import { ImportStatement } from "./import-statement";
 import { TradeForm } from "./trade-form";
 
+// The statement import reads a PDF with Gemini; on Vercel this page's server actions get the Hobby plan's 300 seconds.
+export const maxDuration = 300;
+
 export const metadata: Metadata = {
   title: "Portfolio — StockPilot",
   description: "What you own, what it's worth and how it has done against the S&P 500.",

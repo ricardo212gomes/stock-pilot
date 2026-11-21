@@ -28,6 +28,8 @@ FMP authenticates requests with an API key. No separate API secret is needed for
 
 All keys are read only by server code and are not exposed to the browser. Do not commit your environment file.
 
+To deploy the app, see [`docs/deploy.md`](./docs/deploy.md) (Vercel).
+
 FMP responses are cached (24 hours for statements, 6 hours for prices) to stay within your plan's daily request limit. See [`docs/fmp-data.md`](./docs/fmp-data.md). When FMP's plan doesn't cover a company, or its daily limit is reached, statements come from SEC filings and the quote from Finnhub instead; see [`docs/data-fallbacks.md`](./docs/data-fallbacks.md).
 
 ## Run locally
@@ -95,6 +97,7 @@ The **AI chat** is the round spark button at the bottom right of every page. Ask
 | [`docs/vix.md`](./docs/vix.md) | The VIX fear gauge: zones, the dial, data sources and fallbacks |
 | [`docs/market-maps.md`](./docs/market-maps.md) | The FINVIZ market map embed and its limits |
 | [`docs/auth.md`](./docs/auth.md) | Google sign-in: setup, session cookie and the top bar menu |
+| [`docs/deploy.md`](./docs/deploy.md) | Deploying to Vercel: the project and region, which variables live in Vercel and which in GitHub, sign-in and previews, the shared database, the limits that shaped the code, CI and the Vercel MCP server |
 | [`docs/forecast.md`](./docs/forecast.md) | The Forecast tab: price targets and their trend, ratings by month, estimates, earnings surprises and rating changes, and where each comes from |
 | [`docs/insiders.md`](./docs/insiders.md) | The Insiders tab: Finnhub's Form 4 trades, roles and 10b5-1 plans from the SEC filings, and what each figure counts |
 | [`docs/filings.md`](./docs/filings.md) | The Filings tab: SEC EDGAR filings, filters, 8-K descriptions and press releases |

@@ -2,13 +2,16 @@
   "name": "stock-pilot",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "db:setup": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/setup-db.mjs",
     "symbols:update": "node scripts/update-symbols.mjs",
     "largest:update": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/update-largest.mjs",

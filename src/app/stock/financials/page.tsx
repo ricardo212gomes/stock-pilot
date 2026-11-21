@@ -21,6 +21,9 @@ import {
 import { listedName } from "@/lib/listed-companies";
 import { getHeaderQuote } from "@/lib/stock-overview";
 
+// This page's server actions wait for Gemini; on Vercel they get the Hobby plan's 300 seconds.
+export const maxDuration = 300;
+
 export const generateMetadata = companyMetadata("Financials", "Income statement, balance sheet, cash flow and ratios, annual and quarterly.");
 
 type FinancialsPageProps = {

@@ -24,6 +24,8 @@ There is no database. After Google confirms the account, Auth.js stores the user
    ```
 
    `AUTH_TRUST_HOST` lets Auth.js trust the request's host with `next start`; on Vercel it isn't needed. Alternatively set `AUTH_URL` to the public URL.
+
+   Vercel's preview deployments sign in through production with `AUTH_REDIRECT_PROXY_URL`, so only production's redirect URI is registered; see [`docs/deploy.md`](./deploy.md#google-sign-in).
 4. Restart the server.
 
 Until `AUTH_SECRET`, `AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` are all set, the Sign in button is hidden and the rest of the app works as before. While the consent screen is in **Testing** mode, Google only lets the test users you list sign in; publish it to allow any account.

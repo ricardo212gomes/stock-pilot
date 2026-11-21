@@ -4,6 +4,7 @@ import { refresh } from "next/cache";
 import { currentUserId } from "@/auth";
 import { isDatabaseConfigured } from "@/lib/db";
 import { isCurrency, type Currency } from "@/lib/fx";
+import { MAX_STATEMENT_BYTES, STATEMENT_TOO_BIG } from "@/lib/statement-limit";
 import { formatShares, MAX_INCOME, MAX_SYMBOLS, MAX_TRADES, portfolioToday, prepareTrade, type Trade } from "@/lib/portfolio";
 import { planImport, type ImportPlan } from "@/lib/portfolio-import";
 import {
@@ -29,8 +30,6 @@ import { formatMoney } from "@/lib/valuation/format";
 export type TradeActionResult = { ok: true; message: string } | { ok: false; error: string };
 
 const DATABASE_ERROR = "Your trades couldn't be loaded. Check the database connection and that npm run db:setup has run.";
-// Statements are a couple of megabytes; next.config allows uploads up to 10.
-const MAX_STATEMENT_BYTES = 9.5 * 1024 * 1024;
 
 // Every action works on the signed-in user from the session cookie, never on ids from the browser.
 async function signedIn(): Promise<string | TradeActionResult & { ok: false }> {
@@ -113,7 +112,7 @@ export async function setCurrencyAction(currency: unknown): Promise<TradeActionR
 async function readStatement(formData: FormData): Promise<{ ok: true; statement: Statement } | { ok: false; error: string }> {
   const file = formData.get("statement");
   if (!(file instanceof File) || file.size === 0) return { ok: false, error: "Choose your Trading 212 or Trade Republic statement, a PDF." };
-  if (file.size > MAX_STATEMENT_BYTES) return { ok: false, error: "That file is over 9.5 MB, much bigger than a statement." };
+  if (file.size > MAX_STATEMENT_BYTES) return { ok: false, error: STATEMENT_TOO_BIG };
   const bytes = new Uint8Array(await file.arrayBuffer());
   if (new TextDecoder().decode(bytes.subarray(0, 5)) !== "%PDF-") return { ok: false, error: "That isn't a PDF. Download the statement from your broker as a PDF." };
   let statement: Statement | null;

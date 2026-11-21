@@ -3,6 +3,9 @@ import { parseChatRequest, runChat } from "@/lib/chat/conversation";
 import type { ChatEvent } from "@/lib/chat/protocol";
 import { isGeminiConfigured } from "@/lib/gemini";
 
+// Up to five rounds of look-ups and Gemini; Vercel's Hobby plan allows functions 300 seconds.
+export const maxDuration = 300;
+
 // The AI chat's answers (see docs/chat.md), streamed as one JSON event a line while Gemini writes them.
 
 // Far more than a long conversation; anything bigger is refused before it's parsed.

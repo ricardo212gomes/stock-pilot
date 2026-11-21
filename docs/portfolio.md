@@ -74,7 +74,7 @@ The preview also says:
 
 Only accounts in dollars or euros are imported. A statement in euros offers to show the portfolio in euros as well.
 
-The upload is a few megabytes (a 145-page statement is 1.6 MB), over Next's 1 MB default for server actions, so `next.config.ts` raises the limit to 10 MB. The action refuses files over 9.5 MB and anything that doesn't start like a PDF.
+The upload is a few megabytes (a 145-page statement is 1.6 MB), over Next's 1 MB default for server actions, so `next.config.ts` raises the limit to 4.2 MB. Vercel refuses a request body over 4.5 MB before the action runs, so the import takes statements up to 4 MB (`src/lib/statement-limit.ts`): the browser refuses a bigger file before sending it, and the action refuses one too, along with anything that doesn't start like a PDF.
 
 ## Dollars or euros
 

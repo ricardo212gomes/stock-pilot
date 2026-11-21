@@ -7,6 +7,9 @@ import { SavedSection } from "../saved-section";
 import { ProjectionWorkbench } from "../projection-workbench";
 import { LoadError, SecSourceNote, ToolStart, ValuationHeader, readSymbol, type ValuationSearchParams } from "../valuation-parts";
 
+// This page's server actions wait for Gemini; on Vercel they get the Hobby plan's 300 seconds.
+export const maxDuration = 300;
+
 export const generateMetadata = companyMetadata("Intrinsic Value", "Estimate a company's intrinsic value with a detailed DCF, and dividend, earnings and residual income models.");
 
 function fiscalYear(value: string | undefined): number | null {

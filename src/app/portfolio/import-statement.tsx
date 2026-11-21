@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { MAX_STATEMENT_BYTES, STATEMENT_TOO_BIG } from "@/lib/statement-limit";
 import { importStatementAction, previewStatementAction, type ImportPreview } from "./actions";
 import { ImportPreviewPanel } from "./import-preview";
 
@@ -22,6 +23,10 @@ export function ImportStatement({ startOpen = false }: { startOpen?: boolean }) 
     setPreview(null);
     setStatus(null);
     if (!chosen) return;
+    if (chosen.size > MAX_STATEMENT_BYTES) {
+      setStatus({ ok: false, text: STATEMENT_TOO_BIG });
+      return;
+    }
     const data = new FormData();
     data.set("statement", chosen);
     startTransition(async () => {
