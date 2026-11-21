@@ -15,6 +15,9 @@ export function getSql(): Sql {
     idle_timeout: 20,
     // Supabase's and Neon's poolers run in transaction mode, which doesn't support prepared statements.
     prepare: false,
+    // Type Dates, booleans, bigints and arrays from their JavaScript values, as Postgres.js v3 did, rather than
+    // leaving it to the server, so queries written for v3 (and the `date` columns) behave the same.
+    infer: true,
   });
   return globalForDb.stockPilotSql;
 }
