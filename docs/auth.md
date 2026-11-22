@@ -4,6 +4,8 @@ StockPilot signs users in with Google through [Auth.js](https://authjs.dev) (`ne
 
 There is no database. After Google confirms the account, Auth.js stores the user's name, email and picture in an encrypted, HTTP-only cookie (`authjs.session-token`) that lasts 30 days.
 
+The user's id (`session.user.id`, from `currentUserId()`) is their **Google account id** (Google's `sub`), set at sign-in by the `jwt` callback in `src/auth.ts`. It keys everything a user keeps in Postgres: favorites, the portfolio, saved projections, notifications and their settings. It's the same on every sign-in, device and OAuth client, so production and local development, which share the database, see the same data. Auth.js on its own gives each sign-in a new random id when there's no user table; until 22 Nov 2026 StockPilot used that id, so data saved in one session was lost at the next sign-in, and was moved over to the Google id by hand.
+
 ## Files
 
 - `src/auth.ts`: the Auth.js configuration with the Google provider, and `isAuthConfigured()`.
