@@ -6,7 +6,14 @@ import Google from "next-auth/providers/google";
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [Google],
   callbacks: {
-    // Expose the Google account id, which keys the user's favorites.
+    // Without a user table, Auth.js gives every sign-in a new random id, so signing in again lost everything keyed by
+    // it: favorites, the portfolio, saved projections, notification settings. The Google account id stays the same
+    // on every sign-in, device and OAuth client, so it's the user's id instead.
+    jwt({ token, account }) {
+      if (account?.provider === "google" && account.providerAccountId) token.sub = account.providerAccountId;
+      return token;
+    },
+    // The user's id: their Google account id, which keys their data.
     session({ session, token }) {
       if (token.sub) session.user.id = token.sub;
       return session;
