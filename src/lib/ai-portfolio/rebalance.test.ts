@@ -52,6 +52,7 @@ function setup(overrides: Partial<RebalanceDeps> = {}) {
     model: () => "gemini-test",
     store: {
       isWeekDone: async () => false,
+      attemptedOn: async () => null,
       createRun: async (run) => {
         runs.push({ id: runs.length + 1, status: run.status, problems: run.problems });
         return runs.length;
@@ -84,6 +85,19 @@ describe("runRebalance", () => {
     const report = await runRebalance({ tradingEnabled: true }, closed.deps);
     expect(report).toEqual({ status: "skipped", lines: ["The market is closed; it opens next at 2026-11-17T14:30:00Z. Nothing was done."] });
     expect(closed.runs).toEqual([]);
+  });
+
+  it("tries once a day: after a failed or rejected run, the next try is tomorrow", async () => {
+    const days: string[] = [];
+    const tried = setup({ store: { ...setup().deps.store, attemptedOn: async (day) => (days.push(day), "failed") } });
+    const report = await runRebalance({ tradingEnabled: true }, tried.deps);
+    expect(report).toEqual({ status: "skipped", lines: ["Already tried today (failed); the next try is tomorrow."] });
+    expect(days).toEqual(["2026-11-16"]);
+    expect(tried.runs).toEqual([]);
+
+    // --force runs anyway, and a dry run never asks.
+    expect((await runRebalance({ tradingEnabled: true, force: true }, tried.deps)).status).toBe("placed");
+    expect((await runRebalance({ dryRun: true }, tried.deps)).status).toBe("printed");
   });
 
   it("records the moves without placing them while trading is off", async () => {

@@ -48,6 +48,18 @@ export async function isWeekDone(week: string): Promise<boolean> {
   return rows.length > 0;
 }
 
+// The status of a run already tried on this New York day, if any. The job tries every hour, so a run that failed or
+// was rejected waits for the next day instead of spending the screen's FMP requests again each hour.
+export async function attemptedOn(day: string): Promise<RunStatus | null> {
+  const rows = await getSql()<{ status: RunStatus }[]>`
+    select status from ai_portfolio_runs
+    where (created_at at time zone 'America/New_York')::date = ${day}::date
+    order by id desc
+    limit 1
+  `;
+  return rows[0]?.status ?? null;
+}
+
 export async function createRun(run: {
   week: string;
   status: RunStatus;

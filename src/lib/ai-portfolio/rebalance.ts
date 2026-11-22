@@ -29,7 +29,7 @@ import { checkMoves, checkProposal, fitBuys, isBuy, planMoves, RULES, weekOf, ty
 import * as store from "./store";
 import type { RunStatus } from "./store";
 
-// The weekly rebalance (docs/ai-portfolio.md), run by scripts/ai-portfolio.ts on Mondays while the market is open:
+// The weekly rebalance (docs/ai-portfolio.md), run by scripts/ai-portfolio.ts once a week while the market is open:
 // the candidates and their figures, Gemini's proposal, the checks, then the orders, sales first so the buys
 // spend cash that's really there. Its dependencies come in as one object, so tests can run it without Alpaca,
 // Gemini or a database.
@@ -58,7 +58,7 @@ export type RebalanceDeps = {
   macro: () => Promise<MacroFigures>;
   propose: (prompt: string) => Promise<GeminiResult>;
   model: () => string;
-  store: Pick<typeof store, "isWeekDone" | "createRun" | "setRunStatus" | "insertMoves" | "updateMoveOrder" | "listOpenOrders">;
+  store: Pick<typeof store, "isWeekDone" | "attemptedOn" | "createRun" | "setRunStatus" | "insertMoves" | "updateMoveOrder" | "listOpenOrders">;
   sleep: (ms: number) => Promise<void>;
 };
 
@@ -195,6 +195,9 @@ export async function runRebalance(options: RebalanceOptions = {}, deps: Rebalan
   if (!dryRun) {
     await syncOpenOrders(deps);
     if (!force && (await deps.store.isWeekDone(week))) return { status: "skipped", lines: [`The week of ${week} is already rebalanced.`] };
+    // One full attempt a day: a failed or rejected run is tried again tomorrow, not every hour.
+    const attempted = force ? null : await deps.store.attemptedOn(today);
+    if (attempted) return { status: "skipped", lines: [`Already tried today (${attempted}); the next try is tomorrow.`] };
   }
   if (tradingEnabled && !dryRun) {
     const clock = await deps.clock();

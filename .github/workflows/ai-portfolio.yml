@@ -4,9 +4,10 @@ name: AI portfolio
 
 on:
   schedule:
-    # Mondays at 15:00 UTC, with the market open in winter and summer time (it closes at 20:00 or 21:00 UTC), so a
-    # start hours late still trades. Tuesday is the fallback for a Monday holiday; a week already done is skipped.
-    - cron: "0 15 * * 1,2"
+    # Every hour on weekdays, at 23 minutes past. GitHub often starts scheduled runs hours late, on the hour most of
+    # all: on 16 and 17 Nov 2026 the 15:00 UTC run started after the close both days and did nothing. An attempt while
+    # the market is closed, in a week already rebalanced, or on a day a run was already tried stops within a minute.
+    - cron: "23 * * * 1-5"
   workflow_dispatch:
     inputs:
       dry-run:
