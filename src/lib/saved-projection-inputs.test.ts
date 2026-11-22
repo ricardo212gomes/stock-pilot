@@ -6,6 +6,7 @@ import {
   migrateInputs,
   restoreIntrinsicValue,
   restoreJeremy,
+  restoreParkev,
   restorePlumas,
   sortSaved,
   valueGap,
@@ -13,6 +14,7 @@ import {
 } from "./saved-projection-inputs";
 import { INPUT_FIELDS, SCENARIOS, type BaseYear, type ScenarioId, type ScenarioInputs } from "./plumas-projection";
 import { CASES, CASE_FIELDS, type CaseId, type CaseInputs } from "./jeremy-projection";
+import { DEFAULT_TIMING, PARKEV_YEARS, type ParkevAssumptions } from "./parkev-dcf";
 
 const yearly = (value: number) => [value, value, value, value, value];
 
@@ -107,6 +109,24 @@ describe("restoring saved inputs", () => {
     const bad = restoreJeremy({ cases: { bull: jeremyCases.bull }, start: null }, { cases: jeremyCases, start });
     expect(bad.inputs.cases.base).toEqual(jeremyCases.base);
     expect(bad.dropped).toEqual(expect.arrayContaining(["Base case revenue growth", "Bear case pe low", "starting year"]));
+  });
+
+  it("restores a Parkev DCF with its own fiscal year, typed estimates and timing", () => {
+    const assumptions: ParkevAssumptions = {
+      shortTermGrowth: 0.325, transitionGrowth: 0.1625, longTermGrowth: 0.05, beta: 1.25, riskFreeRate: 0.05,
+      marketRiskPremium: 0.06, costOfDebt: 0.0575, debtWeight: 0.25,
+    };
+    const estimates = [null, 12.5e9, 13.5e9, 15.87e9, 18.17e9, null, null, null, null, null];
+    const base = { year: 2024, fcf: 7.125e9, nonOperatingAssets: 12_222_400_000, debt: 15e9 };
+    const timing = { firstCounted: 3, firstYears: 1.5, terminalYears: 7.5 };
+    const fallback = { assumptions: { ...assumptions, beta: 1 }, estimates: Array(PARKEV_YEARS).fill(null), timing: DEFAULT_TIMING, base: { ...base, year: 2025 } };
+
+    const good = restoreParkev({ assumptions, estimates, timing, base, market: { marketCap: 232_951_815_370, price: null } }, fallback);
+    expect(good).toEqual({ inputs: { assumptions, estimates, timing, base, market: { marketCap: 232_951_815_370, price: null } }, dropped: [] });
+
+    const bad = restoreParkev({ assumptions: { ...assumptions, beta: "high", oldKnob: 1 }, estimates: [1, 2], timing: { firstCounted: 1.5 }, base: null }, fallback);
+    expect(bad.inputs).toEqual({ ...fallback, assumptions: { ...assumptions, beta: 1 }, market: { marketCap: null, price: null } });
+    expect(bad.dropped).toEqual(expect.arrayContaining(["old knob", "beta", "free cash flow estimates", "discounting", "starting year"]));
   });
 
   it("restores Intrinsic Value's assumptions and choices, leaving out retired ones", () => {
