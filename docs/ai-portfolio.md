@@ -6,10 +6,10 @@ It's one account, not each user's: the page is read only and visible to everyone
 
 ## The weekly run
 
-`npm run ai-portfolio:rebalance` (`scripts/ai-portfolio.ts`, `src/lib/ai-portfolio/rebalance.ts`) runs from GitHub Actions on Mondays at 15:00 UTC (`.github/workflows/ai-portfolio.yml`), with the market open in both winter and summer time, so a start delayed by hours still trades. Tuesday at the same time is the fallback for a Monday holiday; a week already done is skipped.
+`npm run ai-portfolio:rebalance` (`scripts/ai-portfolio.ts`, `src/lib/ai-portfolio/rebalance.ts`) runs from GitHub Actions every hour on weekdays, at 23 minutes past (`.github/workflows/ai-portfolio.yml`). GitHub often starts scheduled runs hours late, on the hour most of all: in the portfolio's first week the Monday and Tuesday 15:00 UTC runs both started after the close and did nothing. So the job tries every hour. The first attempt with the market open does the week's run, and every other attempt stops within a minute: the market is closed, the week is done, or a run was already tried that day. The repository is public, so the attempts cost no Actions minutes.
 
 1. **Earlier fills.** Orders from earlier runs whose fills weren't known yet are looked up and recorded.
-2. **One run a week.** If this week (Monday to Sunday, New York time) already has a placed or recorded run, it stops. A rejected or failed run doesn't count, so Tuesday tries again.
+2. **One run a week, one try a day.** If this week (Monday to Sunday, New York time) already has a placed or recorded run, it stops. A rejected or failed run doesn't count for the week, but it does for the day: the next try is the next weekday, so a failing run can't spend the screen's FMP requests (about 73) every hour. `--force` skips both checks.
 3. **The market is open.** With trading on, a closed market (a holiday, or GitHub starting the job after the close) stops the run before anything else; the next scheduled run tries again.
 4. **The account.** Cash, equity and positions from Alpaca.
 5. **Candidates.** The Recommendations screen's companies (the largest US companies FMP's plan covers, see [`recommendations.md`](./recommendations.md)), ranked by the screen's six signals: the best 30, plus every holding. A holding outside the screen gets the same figures with `loadCandidate`; one whose figures can't load at all is kept as it is that week.
